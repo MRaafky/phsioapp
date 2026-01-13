@@ -7,6 +7,7 @@ import AdminPanel from './components/admin/AdminPanel';
 import PaymentPage from './components/PaymentPage';
 import { initializeAi } from './services/geminiService';
 import { initializeUsers, getUser, updateUser, authenticateUser, registerUser } from './services/userService';
+import { getSupabase, isSupabaseConfigured } from './lib/supabase';
 import type { User } from './types';
 
 type View = 'welcome' | 'login' | 'dashboard' | 'admin' | 'payment';
@@ -37,7 +38,6 @@ const App: React.FC = () => {
     initializeUsers(); // Ensure default users exist in local storage
 
     // Handle Supabase auth state changes (email confirmation, etc)
-    const { getSupabase, isSupabaseConfigured } = require('./services/userService');
     if (isSupabaseConfigured()) {
       const supabase = getSupabase();
       const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -54,6 +54,7 @@ const App: React.FC = () => {
         }
       });
 
+      // Cleanup subscription on unmount
       return () => {
         authListener?.subscription?.unsubscribe();
       };
