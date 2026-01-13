@@ -253,7 +253,8 @@ const registerUser_supabase = async (name: string, email: string, password: stri
         options: {
             data: {
                 name: name
-            }
+            },
+            emailRedirectTo: `${window.location.origin}/` // Use current domain instead of localhost
         }
     });
 

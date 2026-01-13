@@ -35,6 +35,30 @@ const App: React.FC = () => {
 
   useEffect(() => {
     initializeUsers(); // Ensure default users exist in local storage
+
+    // Handle Supabase auth state changes (email confirmation, etc)
+    const { getSupabase, isSupabaseConfigured } = require('./services/userService');
+    if (isSupabaseConfigured()) {
+      const supabase = getSupabase();
+      const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+        if (event === 'SIGNED_IN' && session?.user) {
+          // User just signed in (including after email confirmation)
+          try {
+            const user = await getUser(session.user.id);
+            if (user) {
+              loginUser(user);
+            }
+          } catch (error) {
+            console.error('Error fetching user after auth:', error);
+          }
+        }
+      });
+
+      return () => {
+        authListener?.subscription?.unsubscribe();
+      };
+    }
+
     const loggedInUserId = localStorage.getItem('logged_in_user_id');
     if (loggedInUserId) {
       getUser(loggedInUserId).then(user => {
