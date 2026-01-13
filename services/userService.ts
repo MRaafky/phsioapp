@@ -337,6 +337,11 @@ export const getUsers = async (): Promise<User[]> => {
 };
 
 export const getUser = async (userId: string): Promise<User | undefined> => {
+    // Special case: guest user always from localStorage
+    if (userId === 'guest_user') {
+        return await getUser_localStorage(userId);
+    }
+
     if (isSupabaseConfigured()) {
         return await getUser_supabase(userId);
     }

@@ -123,6 +123,8 @@ const App: React.FC = () => {
   };
 
   const handleGuestLogin = async () => {
+    // Always initialize to ensure guest exists in localStorage
+    initializeUsers();
     const guestUser = await getUser('guest_user');
     if (guestUser) {
       loginUser(guestUser);
