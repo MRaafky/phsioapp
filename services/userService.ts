@@ -356,7 +356,50 @@ const authenticateUser_supabase = async (email: string, password: string): Promi
     }
 
     // Get user data
-    const user = await getUser_supabase(authData.user.id);
+    let user = await getUser_supabase(authData.user.id);
+
+    // If user profile doesn't exist (e.g., registered with email confirmation but profile not created)
+    // Create it now on first login
+    if (!user) {
+        console.log('User profile not found, creating on first login...');
+
+        // Get name from auth metadata if available
+        const userName = authData.user.user_metadata?.name || 'User';
+
+        const { data: newUserData, error: insertError } = await supabase
+            .from('users')
+            .insert({
+                id: authData.user.id,
+                email: email.toLowerCase(),
+                name: userName,
+                age: '30',
+                weight: '70',
+                height: '175',
+                is_premium: false,
+            } as any)
+            .select()
+            .single();
+
+        if (insertError) {
+            console.error('Failed to create user profile on login:', insertError);
+            return null;
+        }
+
+        user = {
+            id: newUserData.id,
+            name: newUserData.name,
+            email: newUserData.email,
+            age: newUserData.age || '30',
+            weight: newUserData.weight || '70',
+            height: newUserData.height || '175',
+            isPremium: newUserData.is_premium,
+            activePlan: null,
+            progressData: null,
+            messagesFromAdmin: [],
+            planHistory: [],
+        };
+    }
+
     return user || null;
 };
 
