@@ -316,16 +316,19 @@ const authenticateUser_supabase = async (email: string, password: string): Promi
 // ====================================
 
 export const initializeUsers = () => {
-    // Only needed for localStorage mode
-    if (!isSupabaseConfigured()) {
-        const db = getDb();
-        const guestUserExists = db.users.some(u => u.id === 'guest_user');
+    // Always initialize guest user in localStorage regardless of Supabase config
+    const db = getDb();
+    const guestUserExists = db.users.some(u => u.id === 'guest_user');
 
-        if (!guestUserExists) {
-            const guestUser = createDefaultUser('guest_user', 'Guest User', 'guest@physcio.com');
-            db.users.push(guestUser);
-            saveDb(db);
-        }
+    if (!guestUserExists) {
+        const guestUser = createDefaultUser('guest_user', 'Guest User', 'guest@physcio.com');
+        db.users.push(guestUser);
+        saveDb(db);
+    }
+
+    // Initialize other default users only if NOT using Supabase (to avoid confusion/bloat)
+    if (!isSupabaseConfigured()) {
+        // Logic for other users if needed, or just leave it as is since guest login is the main issue
     }
 };
 

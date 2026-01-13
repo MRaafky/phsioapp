@@ -81,6 +81,13 @@ export interface Database {
 const supabaseUrl = (import.meta as any).env?.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || '';
 
+// Debug log for production
+console.log('Supabase Config Status:', {
+  hasUrl: !!supabaseUrl,
+  hasKey: !!supabaseAnonKey,
+  urlPrefix: supabaseUrl ? supabaseUrl.substring(0, 8) : 'none'
+});
+
 // Create Supabase client
 let supabase: SupabaseClient<Database> | null = null;
 

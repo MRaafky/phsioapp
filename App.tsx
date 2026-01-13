@@ -123,11 +123,21 @@ const App: React.FC = () => {
   };
 
   const handleGuestLogin = async () => {
-    // Always initialize to ensure guest exists in localStorage
-    initializeUsers();
-    const guestUser = await getUser('guest_user');
-    if (guestUser) {
-      loginUser(guestUser);
+    try {
+      console.log('Attempting guest login...');
+      // Always initialize to ensure guest exists in localStorage
+      initializeUsers();
+      const guestUser = await getUser('guest_user');
+      console.log('Guest user retrieved:', guestUser);
+
+      if (guestUser) {
+        loginUser(guestUser);
+      } else {
+        alert('Error: Guest user could not be found or created. Please try again.');
+      }
+    } catch (error) {
+      console.error('Guest login error:', error);
+      alert(`Guest login failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -141,11 +151,19 @@ const App: React.FC = () => {
   };
 
   const handleUserRegister = async (name: string, email: string, pass: string): Promise<{ success: boolean, message: string }> => {
-    const result = await registerUser(name, email, pass);
-    if (result.success && result.user) {
-      loginUser(result.user);
+    try {
+      const result = await registerUser(name, email, pass);
+      if (result.success && result.user) {
+        loginUser(result.user);
+      } else if (!result.success) {
+        alert(`Registration failed: ${result.message}`);
+      }
+      return { success: result.success, message: result.message };
+    } catch (error) {
+      console.error('Registration error:', error);
+      alert(`An unexpected error occurred during registration: ${error instanceof Error ? error.message : String(error)}`);
+      return { success: false, message: 'Unexpected error occurred' };
     }
-    return { success: result.success, message: result.message };
   };
 
   const handleAdminLogin = (email: string, pass: string): boolean => {
