@@ -123,7 +123,6 @@ const App: React.FC = () => {
   };
 
   const handleGuestLogin = async () => {
-    alert('Guest Login Clicked! Processing...'); // Debug UI click
     try {
       console.log('Attempting guest login...');
       // Always initialize to ensure guest exists in localStorage
@@ -134,11 +133,10 @@ const App: React.FC = () => {
       if (guestUser) {
         loginUser(guestUser);
       } else {
-        alert('Error: Guest user could not be found or created. Please try again.');
+        console.error('Error: Guest user could not be found or created.');
       }
     } catch (error) {
       console.error('Guest login error:', error);
-      alert(`Guest login failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   };
 
@@ -156,14 +154,12 @@ const App: React.FC = () => {
       const result = await registerUser(name, email, pass);
       if (result.success && result.user) {
         loginUser(result.user);
-      } else if (!result.success) {
-        alert(`Registration failed: ${result.message}`);
       }
       return { success: result.success, message: result.message };
     } catch (error) {
       console.error('Registration error:', error);
-      alert(`An unexpected error occurred during registration: ${error instanceof Error ? error.message : String(error)}`);
-      return { success: false, message: 'Unexpected error occurred' };
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return { success: false, message: errorMessage };
     }
   };
 

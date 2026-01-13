@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import type { User } from '../types';
 
 interface LoginPageProps {
-  onUserAuth: (email: string, pass: string) => User | null;
-  onUserRegister: (name: string, email: string, pass: string) => { success: boolean, message: string };
+  onUserAuth: (email: string, pass: string) => Promise<User | null>;
+  onUserRegister: (name: string, email: string, pass: string) => Promise<{ success: boolean, message: string }>;
   onGuestLogin: () => void;
 }
 
@@ -18,28 +18,35 @@ const LoginPage: React.FC<LoginPageProps> = ({ onUserAuth, onUserRegister, onGue
   const [userPassword, setUserPassword] = useState('');
 
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleUserSubmit = (e: React.FormEvent) => {
+  const handleUserSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    if (authMode === 'login') {
-      if (!userEmail || !userPassword) {
-        setError('Email and password are required.');
-        return;
+    setIsLoading(true);
+
+    try {
+      if (authMode === 'login') {
+        if (!userEmail || !userPassword) {
+          setError('Email and password are required.');
+          return;
+        }
+        const success = await onUserAuth(userEmail, userPassword);
+        if (!success) {
+          setError('Invalid credentials. Please check your email and password.');
+        }
+      } else { // Register
+        if (!userName || !userEmail || !userPassword) {
+          setError('All fields are required for registration.');
+          return;
+        }
+        const result = await onUserRegister(userName, userEmail, userPassword);
+        if (!result.success) {
+          setError(result.message);
+        }
       }
-      const success = onUserAuth(userEmail, userPassword);
-      if (!success) {
-        setError('Invalid credentials. Please check your email and password.');
-      }
-    } else { // Register
-      if (!userName || !userEmail || !userPassword) {
-        setError('All fields are required for registration.');
-        return;
-      }
-      const result = onUserRegister(userName, userEmail, userPassword);
-      if (!result.success) {
-        setError(result.message);
-      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -107,8 +114,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onUserAuth, onUserRegister, onGue
                   type="text"
                   value={userName}
                   onChange={e => setUserName(e.target.value)}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400 transition-all font-medium text-slate-700 placeholder-slate-400 hover:bg-white"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400 transition-all font-medium text-slate-700 placeholder-slate-400 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                   placeholder="John Doe"
+                  disabled={isLoading}
                   required
                 />
               </div>
@@ -120,8 +128,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onUserAuth, onUserRegister, onGue
                 type="email"
                 value={userEmail}
                 onChange={e => setUserEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400 transition-all font-medium text-slate-700 placeholder-slate-400 hover:bg-white"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400 transition-all font-medium text-slate-700 placeholder-slate-400 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="name@example.com"
+                disabled={isLoading}
                 required
               />
             </div>
@@ -132,8 +141,9 @@ const LoginPage: React.FC<LoginPageProps> = ({ onUserAuth, onUserRegister, onGue
                 type="password"
                 value={userPassword}
                 onChange={e => setUserPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400 transition-all font-medium text-slate-700 placeholder-slate-400 hover:bg-white"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-400/50 focus:border-emerald-400 transition-all font-medium text-slate-700 placeholder-slate-400 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed"
                 placeholder="••••••••"
+                disabled={isLoading}
                 required
               />
             </div>
@@ -147,9 +157,17 @@ const LoginPage: React.FC<LoginPageProps> = ({ onUserAuth, onUserRegister, onGue
 
             <button
               type="submit"
-              className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-200 hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+              disabled={isLoading}
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-200 hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
-              {authMode === 'login' ? 'Sign In' : 'Create Account'}
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <i className="fas fa-spinner fa-spin"></i>
+                  Processing...
+                </span>
+              ) : (
+                authMode === 'login' ? 'Sign In' : 'Create Account'
+              )}
             </button>
           </form>
 
