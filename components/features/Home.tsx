@@ -134,9 +134,11 @@ const Home: React.FC<HomeProps> = ({ progressData, onUpdateProgress, onNavigate,
                     <div className="flex gap-6 [min-width:max-content]">
                         {/* Neck Stretch */}
                         <div className="w-72 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-lg transition-all duration-300">
-                            <div className="h-40 bg-slate-200 flex items-center justify-center text-slate-400">
-                                <i className="fas fa-image text-4xl"></i>
-                            </div>
+                            <img
+                                src="/images/exercises/neck-stretch.png"
+                                alt="Neck Stretch Exercise"
+                                className="h-40 w-full object-cover"
+                            />
                             <div className="p-5">
                                 <h4 className="font-bold text-lg text-slate-800 mb-2 font-heading">
                                     Neck Stretch
@@ -153,9 +155,11 @@ const Home: React.FC<HomeProps> = ({ progressData, onUpdateProgress, onNavigate,
 
                         {/* Shoulder Roll */}
                         <div className="w-72 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-lg transition-all duration-300">
-                            <div className="h-40 bg-slate-200 flex items-center justify-center text-slate-400">
-                                <i className="fas fa-image text-4xl"></i>
-                            </div>
+                            <img
+                                src="/images/exercises/shoulder-roll.png"
+                                alt="Shoulder Roll Exercise"
+                                className="h-40 w-full object-cover"
+                            />
                             <div className="p-5">
                                 <h4 className="font-bold text-lg text-slate-800 mb-2 font-heading">
                                     Shoulder Roll
@@ -172,9 +176,11 @@ const Home: React.FC<HomeProps> = ({ progressData, onUpdateProgress, onNavigate,
 
                         {/* Spinal Twist */}
                         <div className="w-72 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-lg transition-all duration-300">
-                            <div className="h-40 bg-slate-200 flex items-center justify-center text-slate-400">
-                                <i className="fas fa-image text-4xl"></i>
-                            </div>
+                            <img
+                                src="/images/exercises/spinal-twist.png"
+                                alt="Seated Spinal Twist Exercise"
+                                className="h-40 w-full object-cover"
+                            />
                             <div className="p-5">
                                 <h4 className="font-bold text-lg text-slate-800 mb-2 font-heading">
                                     Seated Spinal Twist
@@ -191,9 +197,11 @@ const Home: React.FC<HomeProps> = ({ progressData, onUpdateProgress, onNavigate,
 
                         {/* Quad Stretch */}
                         <div className="w-72 bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden hover:shadow-lg transition-all duration-300">
-                            <div className="h-40 bg-slate-200 flex items-center justify-center text-slate-400">
-                                <i className="fas fa-image text-4xl"></i>
-                            </div>
+                            <img
+                                src="/images/exercises/quad-stretch.png"
+                                alt="Quad Stretch Exercise"
+                                className="h-40 w-full object-cover"
+                            />
                             <div className="p-5">
                                 <h4 className="font-bold text-lg text-slate-800 mb-2 font-heading">
                                     Quad Stretch
