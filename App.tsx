@@ -123,6 +123,7 @@ const App: React.FC = () => {
   };
 
   const handleGuestLogin = async () => {
+    alert('Guest Login Clicked! Processing...'); // Debug UI click
     try {
       console.log('Attempting guest login...');
       // Always initialize to ensure guest exists in localStorage
