@@ -43,7 +43,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onUserAuth, onUserRegister, onGue
         const result = await onUserRegister(userName, userEmail, userPassword);
         if (!result.success) {
           setError(result.message);
+        } else if (result.success && !result.user) {
+          // Email confirmation required - show success message and switch to login
+          alert('✅ ' + result.message + '\n\nPlease check your email and click the confirmation link, then you can sign in.');
+          setAuthMode('login');
+          resetFields();
         }
+        // If result.user exists, onUserRegister will handle login in App.tsx
       }
     } finally {
       setIsLoading(false);

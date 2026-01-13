@@ -247,15 +247,13 @@ const registerUser_supabase = async (name: string, email: string, password: stri
     }
 
     // Register user with Supabase Auth
-    // Pass name in metadata so database trigger can use it
     const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email.toLowerCase(),
         password: password,
         options: {
             data: {
-                name: name  // Stored in auth.users.raw_user_meta_data
-            },
-            emailRedirectTo: undefined  // Disable email confirmation redirect for now
+                name: name
+            }
         }
     });
 
@@ -263,47 +261,83 @@ const registerUser_supabase = async (name: string, email: string, password: stri
         return { success: false, message: authError?.message || 'Registration failed.' };
     }
 
-    // Wait for database trigger to create user profile
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Check if email confirmation is required
+    // If session exists, user is auto-confirmed (local dev)
+    // If no session, email confirmation is required (production)
+    const hasSession = !!authData.session;
 
-    // Sign in to get a session (needed to bypass RLS on SELECT)
-    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.toLowerCase(),
-        password: password,
-    });
+    if (hasSession) {
+        // Email confirmation disabled (local dev) - create profile immediately
+        await new Promise(resolve => setTimeout(resolve, 500));
 
-    if (signInError) {
-        console.error('Sign in after registration failed:', signInError);
-        // Continue anyway, try to fetch without session
+        const { data: userData, error: fetchError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', authData.user.id)
+            .single();
+
+        if (fetchError || !userData) {
+            // Try to create profile manually if it doesn't exist
+            const { data: newUserData, error: insertError } = await supabase
+                .from('users')
+                .insert({
+                    id: authData.user.id,
+                    email: email.toLowerCase(),
+                    name: name,
+                    age: '30',
+                    weight: '70',
+                    height: '175',
+                    is_premium: false,
+                } as any)
+                .select()
+                .single();
+
+            if (insertError || !newUserData) {
+                console.error('Failed to create user profile:', insertError);
+                return { success: false, message: 'Registration failed. Please try again.' };
+            }
+
+            const newUser: User = {
+                id: newUserData.id,
+                name: newUserData.name,
+                email: newUserData.email,
+                age: newUserData.age || '30',
+                weight: newUserData.weight || '70',
+                height: newUserData.height || '175',
+                isPremium: newUserData.is_premium,
+                activePlan: null,
+                progressData: null,
+                messagesFromAdmin: [],
+                planHistory: [],
+            };
+
+            return { success: true, message: 'Registration successful!', user: newUser };
+        }
+
+        const newUser: User = {
+            id: userData.id,
+            name: userData.name,
+            email: userData.email,
+            age: userData.age || '30',
+            weight: userData.weight || '70',
+            height: userData.height || '175',
+            isPremium: userData.is_premium,
+            activePlan: null,
+            progressData: null,
+            messagesFromAdmin: [],
+            planHistory: [],
+        };
+
+        return { success: true, message: 'Registration successful!', user: newUser };
+    } else {
+        // Email confirmation required (production)
+        // Return success but no user object - UI will show "Check your email" message
+        return {
+            success: true,
+            message: 'Registration successful! Please check your email to confirm your account before signing in.',
+            user: undefined
+        };
     }
-
-    // Fetch the created user profile (should have been created by trigger)
-    const { data: userData, error: fetchError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', authData.user.id)
-        .single();
-
-    if (fetchError || !userData) {
-        console.error('Fetch user profile error:', fetchError);
-        return { success: false, message: 'Account created but profile setup failed. Please contact support.' };
-    }
-
-    const newUser: User = {
-        id: userData.id,
-        name: userData.name,
-        email: userData.email,
-        age: userData.age || '30',
-        weight: userData.weight || '70',
-        height: userData.height || '175',
-        isPremium: userData.is_premium,
-        activePlan: null,
-        progressData: null,
-        messagesFromAdmin: [],
-        planHistory: [],
-    };
-
-    return { success: true, message: 'Registration successful!', user: newUser };
 };
 
 const authenticateUser_supabase = async (email: string, password: string): Promise<User | null> => {
