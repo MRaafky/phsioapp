@@ -254,7 +254,8 @@ const registerUser_supabase = async (name: string, email: string, password: stri
         options: {
             data: {
                 name: name  // Stored in auth.users.raw_user_meta_data
-            }
+            },
+            emailRedirectTo: undefined  // Disable email confirmation redirect for now
         }
     });
 
@@ -265,6 +266,17 @@ const registerUser_supabase = async (name: string, email: string, password: stri
     // Wait for database trigger to create user profile
     await new Promise(resolve => setTimeout(resolve, 500));
 
+    // Sign in to get a session (needed to bypass RLS on SELECT)
+    const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase(),
+        password: password,
+    });
+
+    if (signInError) {
+        console.error('Sign in after registration failed:', signInError);
+        // Continue anyway, try to fetch without session
+    }
+
     // Fetch the created user profile (should have been created by trigger)
     const { data: userData, error: fetchError } = await supabase
         .from('users')
@@ -273,6 +285,7 @@ const registerUser_supabase = async (name: string, email: string, password: stri
         .single();
 
     if (fetchError || !userData) {
+        console.error('Fetch user profile error:', fetchError);
         return { success: false, message: 'Account created but profile setup failed. Please contact support.' };
     }
 
