@@ -247,32 +247,33 @@ const registerUser_supabase = async (name: string, email: string, password: stri
     }
 
     // Register user with Supabase Auth
+    // Pass name in metadata so database trigger can use it
     const { data: authData, error: authError } = await supabase.auth.signUp({
         email: email.toLowerCase(),
         password: password,
+        options: {
+            data: {
+                name: name  // Stored in auth.users.raw_user_meta_data
+            }
+        }
     });
 
     if (authError || !authData.user) {
         return { success: false, message: authError?.message || 'Registration failed.' };
     }
 
-    // Create user profile
-    const { data: userData, error: insertError } = await supabase
+    // Wait for database trigger to create user profile
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Fetch the created user profile (should have been created by trigger)
+    const { data: userData, error: fetchError } = await supabase
         .from('users')
-        .insert({
-            id: authData.user.id,
-            email: email.toLowerCase(),
-            name: name,
-            age: '30',
-            weight: '70',
-            height: '175',
-            is_premium: false,
-        } as any)
-        .select()
+        .select('*')
+        .eq('id', authData.user.id)
         .single();
 
-    if (insertError || !userData) {
-        return { success: false, message: 'Failed to create user profile.' };
+    if (fetchError || !userData) {
+        return { success: false, message: 'Account created but profile setup failed. Please contact support.' };
     }
 
     const newUser: User = {
