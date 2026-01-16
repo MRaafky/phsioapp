@@ -418,9 +418,35 @@ export const initializeUsers = () => {
         saveDb(db);
     }
 
-    // Initialize other default users only if NOT using Supabase (to avoid confusion/bloat)
+    // Initialize dummy testing accounts only if NOT using Supabase (to avoid confusion/bloat)
     if (!isSupabaseConfigured()) {
-        // Logic for other users if needed, or just leave it as is since guest login is the main issue
+        // Premium dummy accounts
+        const premiumAccounts = [
+            { id: 'premium_test_1', email: 'premium1@phsioapp.test', name: 'Premium User One', isPremium: true },
+            { id: 'premium_test_2', email: 'premium2@phsioapp.test', name: 'Premium User Two', isPremium: true },
+            { id: 'premium_test_3', email: 'premium.test@phsioapp.com', name: 'Premium Test User', isPremium: true },
+        ];
+
+        // Free dummy accounts
+        const freeAccounts = [
+            { id: 'free_test_1', email: 'free1@phsioapp.test', name: 'Free User One', isPremium: false },
+            { id: 'free_test_2', email: 'free2@phsioapp.test', name: 'Free User Two', isPremium: false },
+            { id: 'free_test_3', email: 'free.test@phsioapp.com', name: 'Free Test User', isPremium: false },
+        ];
+
+        const allTestAccounts = [...premiumAccounts, ...freeAccounts];
+
+        // Add test accounts if they don't exist
+        allTestAccounts.forEach(account => {
+            const exists = db.users.some(u => u.id === account.id || u.email === account.email);
+            if (!exists) {
+                const newUser = createDefaultUser(account.id, account.name, account.email);
+                newUser.isPremium = account.isPremium;
+                db.users.push(newUser);
+            }
+        });
+
+        saveDb(db);
     }
 };
 
