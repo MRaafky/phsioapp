@@ -25,6 +25,7 @@ const PostureIQ: React.FC = () => {
     const streamRef = useRef<MediaStream | null>(null);
     const requestRef = useRef<number | null>(null);
     const countdownIntervalRef = useRef<any>(null);
+    const isMountedRef = useRef<boolean>(true);
 
 
     // Load MoveNet model, waiting for scripts to be ready
@@ -122,63 +123,129 @@ const PostureIQ: React.FC = () => {
     };
 
     const detectPose = useCallback(async () => {
+        if (!isMountedRef.current) return;
+
         if (detectorRef.current && videoRef.current && videoRef.current.readyState >= 3) {
-            const poses = await detectorRef.current.estimatePoses(videoRef.current);
-            if (poses && poses.length > 0) {
-                drawPose(poses[0]);
+            try {
+                const poses = await detectorRef.current.estimatePoses(videoRef.current);
+                if (poses && poses.length > 0 && isMountedRef.current) {
+                    drawPose(poses[0]);
+                }
+            } catch (err) {
+                console.error('Error detecting pose:', err);
             }
         }
-        requestRef.current = requestAnimationFrame(detectPose);
-    }, []);
+        if (isMountedRef.current) {
+            requestRef.current = requestAnimationFrame(detectPose);
+        }
+    }, [drawPose]);
 
     const startCamera = async () => {
+        // Stop existing camera if running
+        if (streamRef.current) {
+            stopCamera();
+        }
+
         setError(null);
         setAnalysisResult(null);
         setCapturedImage(null);
         setCountdown(null);
+
         try {
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'user' }
+                video: {
+                    facingMode: 'user',
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
             });
+
+            if (!isMountedRef.current) {
+                // Component unmounted while waiting for camera
+                stream.getTracks().forEach(track => track.stop());
+                return;
+            }
+
             streamRef.current = stream;
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
                 videoRef.current.onloadedmetadata = () => {
-                    videoRef.current?.play();
-                    setIsCameraOn(true);
-                    detectPose();
+                    if (videoRef.current && isMountedRef.current) {
+                        videoRef.current.play()
+                            .then(() => {
+                                if (isMountedRef.current) {
+                                    setIsCameraOn(true);
+                                    detectPose();
+                                }
+                            })
+                            .catch((playErr) => {
+                                console.error('Error playing video:', playErr);
+                                if (isMountedRef.current) {
+                                    setError('Failed to start video playback. Please try again.');
+                                }
+                            });
+                    }
                 };
             }
         } catch (err: any) {
             console.error("Camera access error:", err);
+            if (!isMountedRef.current) return;
+
             if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
                 setError("Camera access was denied. Please allow camera permission in your browser settings to use this feature.");
             } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
                 setError("No camera found. Please ensure a camera is connected and enabled.");
+            } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+                setError("Camera is already in use by another application. Please close other apps using the camera and try again.");
             } else {
-                setError("An error occurred while trying to access the camera.");
+                setError(`An error occurred while accessing the camera: ${err.message || 'Unknown error'}`);
             }
         }
     };
 
     const stopCamera = () => {
+        // Stop all video tracks
         if (streamRef.current) {
-            streamRef.current.getTracks().forEach(track => track.stop());
+            streamRef.current.getTracks().forEach(track => {
+                track.stop();
+            });
+            streamRef.current = null;
         }
+
+        // Clear video source
+        if (videoRef.current) {
+            videoRef.current.srcObject = null;
+        }
+
+        // Clear canvas
+        if (canvasRef.current) {
+            const ctx = canvasRef.current.getContext('2d');
+            ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        }
+
+        // Cancel animation frame
         if (requestRef.current) {
             cancelAnimationFrame(requestRef.current);
+            requestRef.current = null;
         }
+
+        // Clear countdown timer
         if (countdownIntervalRef.current) {
             clearInterval(countdownIntervalRef.current);
             countdownIntervalRef.current = null;
         }
+
         setCountdown(null);
         setIsCameraOn(false);
     };
 
     // Cleanup on unmount
     useEffect(() => {
-        return () => stopCamera();
+        isMountedRef.current = true;
+        return () => {
+            isMountedRef.current = false;
+            stopCamera();
+        };
     }, []);
 
     const captureAndAnalyze = async () => {
@@ -188,8 +255,21 @@ const PostureIQ: React.FC = () => {
         const video = videoRef.current;
         const ctx = canvas.getContext('2d');
 
-        // Draw video frame onto canvas
-        ctx?.drawImage(video, 0, 0, canvas.width, canvas.height);
+        if (ctx) {
+            // Note: Since we are using CSS transform to flip the display,
+            // the raw video data is still unflipped.
+            // If you want the captured image to match the "flipped" display, 
+            // we need to transform the context before drawing.
+
+            // Save current context state
+            ctx.save();
+            // Flip context horizontally
+            ctx.scale(-1, 1);
+            // Draw image (with negative width to account for flip)
+            ctx.drawImage(video, 0, 0, -canvas.width, canvas.height);
+            // Restore context state
+            ctx.restore();
+        }
 
         // Get image data
         const base64String = canvas.toDataURL('image/jpeg').split(',')[1];
@@ -309,8 +389,18 @@ const PostureIQ: React.FC = () => {
                 {/* Left side: Camera View & Capture */}
                 <div className="space-y-4">
                     <div className="relative w-full aspect-video bg-slate-900 rounded-2xl overflow-hidden shadow-lg border border-slate-800">
-                        <video ref={videoRef} className={`w-full h-full object-cover ${!isCameraOn && 'hidden'}`}></video>
-                        <canvas ref={canvasRef} className={`absolute top-0 left-0 w-full h-full object-cover ${!isCameraOn && 'hidden'}`}></canvas>
+                        <video
+                            ref={videoRef}
+                            className={`w-full h-full object-cover ${!isCameraOn && 'hidden'}`}
+                            // FIXED: Added transform to flip video horizontally (un-mirror)
+                            style={{ transform: 'scaleX(-1)' }}
+                        ></video>
+                        <canvas
+                            ref={canvasRef}
+                            className={`absolute top-0 left-0 w-full h-full object-cover ${!isCameraOn && 'hidden'}`}
+                            // FIXED: Canvas must also be flipped to match the flipped video
+                            style={{ transform: 'scaleX(-1)' }}
+                        ></canvas>
                         {!isCameraOn && capturedImage && (
                             <img src={capturedImage} alt="Captured Posture" className="w-full h-full object-cover" />
                         )}
@@ -339,8 +429,8 @@ const PostureIQ: React.FC = () => {
                                         onClick={() => setTimerDuration(duration)}
                                         disabled={countdown !== null}
                                         className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${timerDuration === duration
-                                                ? 'bg-emerald-500 text-white shadow-md'
-                                                : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                                            ? 'bg-emerald-500 text-white shadow-md'
+                                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                                             } disabled:opacity-50 disabled:cursor-not-allowed`}
                                     >
                                         {duration === 0 ? 'Off' : `${duration}s`}

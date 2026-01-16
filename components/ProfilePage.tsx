@@ -121,7 +121,7 @@ const ProfilePage: React.FC<ProfilePageProps> = ({
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 space-y-6">
                 <div>
                     <label htmlFor="geminiApiKeyInput" className="block text-slate-700 text-sm font-bold mb-2">
-                        Gemini API Token
+                        API Token
                     </label>
                     <input
                         id="geminiApiKeyInput"
